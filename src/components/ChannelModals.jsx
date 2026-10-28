@@ -12,7 +12,7 @@ import {
   upsertChannel,
 } from "../api.js";
 import { cleanText } from "../profanity.js";
-import { useUiStore } from "../store/ui.js";
+import { useAuthStore, useStores, useUiStore } from "../store/context.js";
 
 // The expired-session error is shared across modals, the fallback text is
 // per-mutation; both are resolved with t by the caller.
@@ -63,6 +63,7 @@ function ChannelNameForm({ form, onSubmit, pending, errorText, submitLabel }) {
 function AddChannelModal({ channels, onClose }) {
   const queryClient = useQueryClient();
   const setCurrentChannel = useUiStore((state) => state.setCurrentChannel);
+  const token = useAuthStore((state) => state.token);
   const { t } = useTranslation();
   // hasLength trims the value itself (like the submit below), so both checks
   // agree on what the user typed. The validators live inside the component:
@@ -84,7 +85,7 @@ function AddChannelModal({ channels, onClose }) {
     },
   });
   const create = useMutation({
-    mutationFn: createChannel,
+    mutationFn: (values) => createChannel(token, values),
     onError: logMutationError,
     onSuccess: (channel) => {
       queryClient.setQueryData(["channels"], (old) => upsertChannel(old ?? [], channel));
@@ -118,6 +119,7 @@ function AddChannelModal({ channels, onClose }) {
 
 function RenameChannelModal({ channel, channels, onClose }) {
   const queryClient = useQueryClient();
+  const token = useAuthStore((state) => state.token);
   const { t } = useTranslation();
   const lengthValidator = hasLength({ min: 3, max: 20 }, t("validation.length3to20"));
   const form = useForm({
@@ -137,7 +139,7 @@ function RenameChannelModal({ channel, channels, onClose }) {
     },
   });
   const rename = useMutation({
-    mutationFn: renameChannel,
+    mutationFn: (values) => renameChannel(token, values),
     onError: logMutationError,
     onSuccess: (updated) => {
       queryClient.setQueryData(["channels"], (old) => upsertChannel(old ?? [], updated));
@@ -170,12 +172,14 @@ function RenameChannelModal({ channel, channels, onClose }) {
 
 function RemoveChannelModal({ channel, onClose }) {
   const queryClient = useQueryClient();
+  const token = useAuthStore((state) => state.token);
+  const { ui } = useStores();
   const { t } = useTranslation();
   const removal = useMutation({
-    mutationFn: deleteChannel,
+    mutationFn: (values) => deleteChannel(token, values),
     onError: logMutationError,
     onSuccess: () => {
-      applyChannelRemoval(queryClient, channel.id);
+      applyChannelRemoval(queryClient, ui, channel.id);
       notifications.show({ message: t("notifications.channelRemoved"), color: "green" });
       onClose();
     },

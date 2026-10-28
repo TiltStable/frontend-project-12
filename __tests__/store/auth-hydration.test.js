@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test } from "vitest";
+
+import { createAuthStore } from "../../src/store/auth.js";
 
 // Client-side hydration path: a token saved by a previous session must be
-// back in the store right after the store module loads (persist reads
+// back in the store right after the store is created (persist reads
 // localStorage synchronously at creation). renderToString-based tests cannot
 // catch a regression here — they read the initial snapshot, not the
-// hydrated state.
-test("rehydrates the token from localStorage on load", async () => {
+// hydrated state. With per-launch factories a fresh createAuthStore() per
+// test replays the exact launch-time hydration.
+beforeEach(() => {
+  localStorage.clear();
+});
+
+test("rehydrates the token from localStorage at creation", () => {
   localStorage.setItem(
     "auth",
     JSON.stringify({
@@ -15,27 +22,24 @@ test("rehydrates the token from localStorage on load", async () => {
     }),
   );
 
-  const { useAuthStore } = await import("../../src/store/auth.js");
+  const auth = createAuthStore();
 
-  expect(useAuthStore.getState().token).toBe("saved-token");
-  expect(useAuthStore.getState().username).toBe("admin");
-  expect(useAuthStore.persist.hasHydrated()).toBe(true);
+  expect(auth.getState().token).toBe("saved-token");
+  expect(auth.getState().username).toBe("admin");
+  expect(auth.persist.hasHydrated()).toBe(true);
 });
 
-test("drops an old-schema session without a username", async () => {
+test("drops an old-schema session without a username", () => {
   // A session persisted by an older schema carries no username: restoring it
   // would poison every sent message with username: null, so it is dropped
   // and the user lands on the login page.
   localStorage.setItem("auth", JSON.stringify({ state: { token: "saved-token" }, version: 0 }));
-  // The store module was already imported by the previous test: reset the
-  // module cache so the store re-creates and re-hydrates from this storage.
-  vi.resetModules();
 
-  const { useAuthStore } = await import("../../src/store/auth.js");
+  const auth = createAuthStore();
 
-  expect(useAuthStore.getState().token).toBeNull();
-  expect(useAuthStore.getState().username).toBeNull();
+  expect(auth.getState().token).toBeNull();
+  expect(auth.getState().username).toBeNull();
   // The store actions survive the merge.
-  expect(typeof useAuthStore.getState().logIn).toBe("function");
-  expect(typeof useAuthStore.getState().logOut).toBe("function");
+  expect(typeof auth.getState().logIn).toBe("function");
+  expect(typeof auth.getState().logOut).toBe("function");
 });

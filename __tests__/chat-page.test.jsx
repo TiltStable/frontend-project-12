@@ -9,8 +9,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import ChatPage from "../src/components/ChatPage.jsx";
 import init from "../src/init.jsx";
 import filter from "leo-profanity";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { StoresContext } from "../src/store/context.js";
+import { createTestStores, seedStores } from "./helpers.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,6 +43,7 @@ const waitForInAct = async (assertion) => {
 
 let container;
 let root;
+let stores;
 
 const renderChatPage = () => {
   const queryClient = new QueryClient({
@@ -53,18 +54,20 @@ const renderChatPage = () => {
   root = createRoot(container);
   act(() => {
     root.render(
-      <MantineProvider>
-        <QueryClientProvider client={queryClient}>
-          <ChatPage />
-        </QueryClientProvider>
-      </MantineProvider>,
+      <StoresContext.Provider value={stores}>
+        <MantineProvider>
+          <QueryClientProvider client={queryClient}>
+            <ChatPage />
+          </QueryClientProvider>
+        </MantineProvider>
+      </StoresContext.Provider>,
     );
   });
 };
 
 beforeEach(() => {
-  useUiStore.setState({ currentChannelId: null });
-  useAuthStore.setState({ token: "jwt-token", username: "admin" });
+  localStorage.clear();
+  stores = seedStores(createTestStores(), { token: "jwt-token", username: "admin" });
 });
 
 afterEach(() => {
@@ -115,7 +118,7 @@ test("renders channels and the selected channel messages", async () => {
   expect(container.textContent).toContain("Отправить");
 
   // Selecting a channel via the store moves the highlight.
-  act(() => useUiStore.getState().setCurrentChannel("2"));
+  act(() => stores.ui.getState().setCurrentChannel("2"));
   await flush();
   expect(container.textContent).toContain("# random");
   expect(container.textContent).toContain("Сообщений пока нет");
@@ -200,7 +203,7 @@ const typeText = (input, text) => {
 };
 
 test("sends a message and shows it in the feed", async () => {
-  useUiStore.setState({ currentChannelId: "1" });
+    stores.ui.setState({ currentChannelId: "1" });
   const fetchMock = vi.fn((url, options) => {
     if (url.endsWith("/channels")) {
       return Promise.resolve(
@@ -246,7 +249,7 @@ test("sends a message and shows it in the feed", async () => {
 });
 
 test("keeps the input text and shows an error when sending fails", async () => {
-  useUiStore.setState({ currentChannelId: "1" });
+    stores.ui.setState({ currentChannelId: "1" });
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options) => {
@@ -285,7 +288,7 @@ test("keeps the input text and shows an error when sending fails", async () => {
 });
 
 test("a double submit in one synchronous block sends only one message", async () => {
-  useUiStore.setState({ currentChannelId: "1" });
+    stores.ui.setState({ currentChannelId: "1" });
   const fetchMock = vi.fn((url, options) => {
     if (options?.method === "POST") {
       const posted = JSON.parse(options.body);
@@ -331,8 +334,8 @@ test("a double submit in one synchronous block sends only one message", async ()
 });
 
 test("sending without a username shows a session error and skips the request", async () => {
-  useUiStore.setState({ currentChannelId: "1" });
-  useAuthStore.setState({ token: "jwt-token", username: null });
+    stores.ui.setState({ currentChannelId: "1" });
+    stores.auth.setState({ token: "jwt-token", username: null });
   const fetchMock = vi.fn((url) => {
     if (url.endsWith("/channels")) {
       return Promise.resolve(
@@ -368,7 +371,7 @@ test("sending without a username shows a session error and skips the request", a
 });
 
 test("a profane message is masked before it is sent", async () => {
-  useUiStore.setState({ currentChannelId: "1" });
+    stores.ui.setState({ currentChannelId: "1" });
   const word = filter.getDictionary("ru").find((w) => /[а-яё]/i.test(w) && !/\s/.test(w));
   const fetchMock = vi.fn((url, options) => {
     if (url.endsWith("/channels")) {
@@ -435,7 +438,7 @@ test("socket newMessage events render in the feed without duplicates", async () 
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  const element = await init(socket);
+  const element = await init(socket, { stores });
   act(() => {
     root.render(element);
   });

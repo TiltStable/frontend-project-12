@@ -5,8 +5,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import App from "../src/App.jsx";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { StoresContext } from "../src/store/context.js";
+import { createTestStores } from "./helpers.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -66,6 +66,7 @@ const makeFetchMock = () =>
 
 let container;
 let root;
+let stores;
 
 const renderApp = (path) => {
   window.history.replaceState({}, "", path);
@@ -74,7 +75,9 @@ const renderApp = (path) => {
   root = createRoot(container);
   act(() => {
     root.render(
-      <App queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })} />,
+      <StoresContext.Provider value={stores}>
+        <App queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })} />
+      </StoresContext.Provider>,
     );
   });
 };
@@ -85,8 +88,8 @@ beforeEach(() => {
   });
   fetchMock = makeFetchMock();
   vi.stubGlobal("fetch", fetchMock);
-  useAuthStore.setState({ token: null, username: null });
-  useUiStore.setState({ currentChannelId: null, modal: null });
+  localStorage.clear();
+  stores = createTestStores();
 });
 
 afterEach(() => {
@@ -210,8 +213,8 @@ test("a successful signup posts, stores the session and redirects to the chat", 
 
   await waitForInAct(() => expect(window.location.pathname).toBe("/"));
   expect(container.textContent).toContain("Каналы");
-  expect(useAuthStore.getState().token).toBe("jwt-token");
-  expect(useAuthStore.getState().username).toBe("newbie");
+  expect(stores.auth.getState().token).toBe("jwt-token");
+  expect(stores.auth.getState().username).toBe("newbie");
 
   const calls = postCalls();
   expect(calls).toHaveLength(1);

@@ -1,28 +1,31 @@
 import { beforeEach, expect, test } from "vitest";
 
-import { useUiStore } from "../../src/store/ui.js";
+import { createUiStore } from "../../src/store/ui.js";
+
+// A fresh instance per test mirrors the per-launch creation in init.jsx.
+let ui;
 
 beforeEach(() => {
-  useUiStore.setState({ currentChannelId: null, modal: null });
+  ui = createUiStore();
 });
 
 test("currentChannelId starts empty", () => {
-  expect(useUiStore.getState().currentChannelId).toBeNull();
+  expect(ui.getState().currentChannelId).toBeNull();
 });
 
 test("setCurrentChannel stores the selected channel id", () => {
-  useUiStore.getState().setCurrentChannel("2");
+  ui.getState().setCurrentChannel("2");
 
-  expect(useUiStore.getState().currentChannelId).toBe("2");
+  expect(ui.getState().currentChannelId).toBe("2");
 });
 
 test("openModal stores the modal descriptor, closeModal resets it", () => {
-  expect(useUiStore.getState().modal).toBeNull();
+  expect(ui.getState().modal).toBeNull();
 
   const channel = { id: "3", name: "project", removable: true };
-  useUiStore.getState().openModal({ type: "rename", channel });
-  expect(useUiStore.getState().modal).toEqual({ type: "rename", channel });
+  ui.getState().openModal({ type: "rename", channel });
+  expect(ui.getState().modal).toEqual({ type: "rename", channel });
 
-  useUiStore.getState().closeModal();
-  expect(useUiStore.getState().modal).toBeNull();
+  ui.getState().closeModal();
+  expect(ui.getState().modal).toBeNull();
 });

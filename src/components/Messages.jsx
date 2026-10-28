@@ -5,13 +5,14 @@ import { useTranslation } from "react-i18next";
 
 import { sendMessage, upsertMessage } from "../api.js";
 import { cleanText } from "../profanity.js";
-import { useAuthStore } from "../store/auth.js";
+import { useAuthStore } from "../store/context.js";
 
 function Messages({ messages, channels, currentChannelId }) {
   const currentChannel = channels?.find((channel) => channel.id === currentChannelId) ?? null;
   const channelMessages = messages.filter((message) => message.channelId === currentChannelId);
   const queryClient = useQueryClient();
   const username = useAuthStore((state) => state.username);
+  const token = useAuthStore((state) => state.token);
   const { t } = useTranslation();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,7 +35,7 @@ function Messages({ messages, channels, currentChannelId }) {
     setSendError(null);
     setSending(true);
     try {
-      const message = await sendMessage({
+      const message = await sendMessage(token, {
         channelId: currentChannelId,
         body: cleanText(text),
         username,

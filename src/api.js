@@ -1,25 +1,22 @@
-import { useAuthStore } from "./store/auth.js";
-import { useUiStore } from "./store/ui.js";
-
 // Error messages are machine codes: the UI maps them to human texts, the
 // i18next step will move those texts to locales.
-
-const authHeaders = () => {
-  const { token } = useAuthStore.getState();
-  return { Authorization: `Bearer ${token}` };
-};
+//
+// Every authed function takes the token as an explicit argument: the module
+// holds no state, so a request always carries the session it was made from.
 
 // A hung connection must not leave the UI blocked forever: the rejection
 // flows through the same ladder and unlocks whatever is showing a spinner.
 const REQUEST_TIMEOUT_MS = 10_000;
 
-const fetchData = async (url) => {
+const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
+
+const fetchData = async (url, token) => {
   let response;
   let data;
   try {
     response = await fetch(url, {
       method: "GET",
-      headers: authHeaders(),
+      headers: authHeaders(token),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (response.status === 401) {
@@ -58,8 +55,8 @@ export const isChannelRemoval = (payload) => typeof payload?.id === "string";
 
 // A 200 with an unexpected body would silently break the rendering, so every
 // fetched list is validated at the contract layer.
-const fetchList = async (url, isItem) => {
-  const data = await fetchData(url);
+const fetchList = async (url, isItem, token) => {
+  const data = await fetchData(url, token);
   if (!Array.isArray(data) || !data.every(isItem)) {
     throw new Error("network", { cause: data });
   }
@@ -69,16 +66,16 @@ const fetchList = async (url, isItem) => {
 // The shared write ladder: a fetch rejection, an unexpected status, a
 // non-JSON body or a contract violation all surface as "network"; an expired
 // session is actionable and maps to "credentials".
-const mutateJson = async (url, method, body, isItem) => {
+const mutateJson = async (url, method, body, isItem, token) => {
   let response;
   try {
     response = await fetch(
       url,
       body === undefined
-        ? { method, headers: authHeaders(), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }
+        ? { method, headers: authHeaders(token), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }
         : {
             method,
-            headers: { ...authHeaders(), "Content-Type": "application/json" },
+            headers: { ...authHeaders(token), "Content-Type": "application/json" },
             body: JSON.stringify(body),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
           },
@@ -169,9 +166,9 @@ export const signUp = async ({ username, password }) => {
   return data;
 };
 
-export const getChannels = () => fetchList("/api/v1/channels", isChannel);
+export const getChannels = (token) => fetchList("/api/v1/channels", isChannel, token);
 
-export const getMessages = () => fetchList("/api/v1/messages", isMessage);
+export const getMessages = (token) => fetchList("/api/v1/messages", isMessage, token);
 
 // A message can reach the cache twice (the POST response of the sender and
 // the socket broadcast), so insertion is idempotent by id.
@@ -195,27 +192,28 @@ export const upsertChannel = (list, channel) => {
 // the socket handler): drop the channel and its messages, and any client
 // viewing the removed channel falls back to the default one. The channel
 // cache may still be empty when the broadcast arrives (socket connects
-// before the first GET), so every read tolerates undefined.
-export const applyChannelRemoval = (queryClient, channelId) => {
+// before the first GET), so every read tolerates undefined. The ui store is
+// passed in: this module stays stateless.
+export const applyChannelRemoval = (queryClient, uiStore, channelId) => {
   queryClient.setQueryData(["channels"], (old) => (old ?? []).filter((c) => c.id !== channelId));
   queryClient.setQueryData(["messages"], (old) =>
     (old ?? []).filter((message) => message.channelId !== channelId),
   );
-  const { currentChannelId, setCurrentChannel } = useUiStore.getState();
+  const { currentChannelId, setCurrentChannel } = uiStore.getState();
   if (currentChannelId === channelId) {
     const channels = queryClient.getQueryData(["channels"]);
     setCurrentChannel(channels?.length > 0 ? channels[0].id : null);
   }
 };
 
-export const sendMessage = ({ channelId, body, username }) =>
-  mutateJson("/api/v1/messages", "POST", { channelId, body, username }, isMessage);
+export const sendMessage = (token, { channelId, body, username }) =>
+  mutateJson("/api/v1/messages", "POST", { channelId, body, username }, isMessage, token);
 
-export const createChannel = ({ name }) =>
-  mutateJson("/api/v1/channels", "POST", { name }, isChannel);
+export const createChannel = (token, { name }) =>
+  mutateJson("/api/v1/channels", "POST", { name }, isChannel, token);
 
-export const renameChannel = ({ id, name }) =>
-  mutateJson(`/api/v1/channels/${id}`, "PATCH", { name }, isChannel);
+export const renameChannel = (token, { id, name }) =>
+  mutateJson(`/api/v1/channels/${id}`, "PATCH", { name }, isChannel, token);
 
-export const deleteChannel = ({ id }) =>
-  mutateJson(`/api/v1/channels/${id}`, "DELETE", undefined, isChannelRemoval);
+export const deleteChannel = (token, { id }) =>
+  mutateJson(`/api/v1/channels/${id}`, "DELETE", undefined, isChannelRemoval, token);

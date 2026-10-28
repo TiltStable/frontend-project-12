@@ -2,23 +2,14 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { createTestStores, seedStores } from "./helpers.js";
 import init from "../src/init.jsx";
-import { useAuthStore } from "../src/store/auth.js";
 
 // BrowserRouter reads the current location at render time, so every test
 // starts from "/" to stay independent of the previous test's pushState.
-// Under renderToString React takes the store's server snapshot: zustand v5
-// serves getInitialState() there, and the persist middleware pins it to the
-// creator's result object. Seeding therefore mutates that snapshot, while
-// setState alone would only update the client-side state.
-const seedAuth = ({ token, username }) => {
-  Object.assign(useAuthStore.getInitialState(), { token, username });
-  useAuthStore.setState({ token, username });
-};
-
 beforeEach(() => {
   window.history.replaceState({}, "", "/");
-  seedAuth({ token: null, username: null });
+  localStorage.clear();
 });
 
 // The app contract: init receives a socket (opened by the caller), returns
@@ -38,9 +29,9 @@ test("init subscribes to socket events", async () => {
 
 test("renders the chat page at / for an authenticated user", async () => {
   const socket = { on: vi.fn() };
-  seedAuth({ token: "fake-token", username: "admin" });
+  const stores = seedStores(createTestStores(), { token: "fake-token", username: "admin" });
 
-  const markup = renderToString(await init(socket));
+  const markup = renderToString(await init(socket, { stores }));
 
   // Queries do not fetch during SSR: the page renders in its pending state.
   expect(markup).toContain("Hexlet Chat");

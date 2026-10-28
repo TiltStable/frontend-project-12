@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { logIn as logInRequest } from "../api.js";
-import { useAuthStore } from "../store/auth.js";
+import { useAuthStore } from "../store/context.js";
 
 function LoginPage() {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { QueryClient } from "@tanstack/react-query";
 
@@ -16,19 +16,14 @@ import {
   upsertChannel,
   upsertMessage,
 } from "../src/api.js";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { createUiStore } from "../src/store/ui.js";
 
-beforeEach(() => {
-  // Node env has no localStorage: seeding via actions would make the persist
-  // middleware warn, setState bypasses it without affecting the token read.
-  useAuthStore.setState({ token: "jwt-token", username: "admin" });
-  useUiStore.setState({ currentChannelId: null, modal: null });
-});
+// The api module is stateless: every authed call carries its own token, so
+// there is nothing to seed or reset between tests.
+const TOKEN = "jwt-token";
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  useAuthStore.setState({ token: null, username: null });
 });
 
 test("logIn resolves with token and username", async () => {
@@ -138,7 +133,7 @@ test("getChannels requests the channels with the auth header", async () => {
     .mockResolvedValue(new Response(JSON.stringify(channels), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await getChannels();
+  const data = await getChannels(TOKEN);
 
   expect(data).toEqual(channels);
   const [url, options] = fetchMock.mock.calls[0];
@@ -154,7 +149,7 @@ test("getMessages requests the messages with the auth header", async () => {
     .mockResolvedValue(new Response(JSON.stringify(messages), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await getMessages();
+  const data = await getMessages(TOKEN);
 
   expect(data).toEqual(messages);
   const [url, options] = fetchMock.mock.calls[0];
@@ -168,7 +163,7 @@ test("getChannels throws network error on a non-array body", async () => {
     vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
   );
 
-  await expect(getChannels()).rejects.toThrow("network");
+  await expect(getChannels(TOKEN)).rejects.toThrow("network");
 });
 
 test("getMessages throws network error when an item misses required fields", async () => {
@@ -178,20 +173,20 @@ test("getMessages throws network error when an item misses required fields", asy
     vi.fn().mockResolvedValue(new Response(JSON.stringify(messages), { status: 200 })),
   );
 
-  await expect(getMessages()).rejects.toThrow("network");
+  await expect(getMessages(TOKEN)).rejects.toThrow("network");
 });
 
 test("getChannels throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
   // An expired session is actionable and must not read as a network failure.
-  await expect(getChannels()).rejects.toThrow("credentials");
+  await expect(getChannels(TOKEN)).rejects.toThrow("credentials");
 });
 
 test("getMessages throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(getMessages()).rejects.toThrow("credentials");
+  await expect(getMessages(TOKEN)).rejects.toThrow("credentials");
 });
 
 test("sendMessage posts the message with auth and content-type headers", async () => {
@@ -201,7 +196,7 @@ test("sendMessage posts the message with auth and content-type headers", async (
     .mockResolvedValue(new Response(JSON.stringify(message), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await sendMessage({ channelId: "1", body: "hello", username: "admin" });
+  const data = await sendMessage(TOKEN, { channelId: "1", body: "hello", username: "admin" });
 
   expect(data).toEqual(message);
   const [url, options] = fetchMock.mock.calls[0];
@@ -219,7 +214,7 @@ test("sendMessage posts the message with auth and content-type headers", async (
 test("sendMessage throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(sendMessage({ channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
+  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
     "credentials",
   );
 });
@@ -227,7 +222,7 @@ test("sendMessage throws credentials error on 401", async () => {
 test("sendMessage throws network error when fetch rejects", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
-  await expect(sendMessage({ channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
+  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
     "network",
   );
 });
@@ -238,7 +233,7 @@ test("sendMessage throws network error on a 200 with an unexpected body", async 
     vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 })),
   );
 
-  await expect(sendMessage({ channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
+  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
     "network",
   );
 });
@@ -275,7 +270,7 @@ test("createChannel posts the name with auth and content-type headers", async ()
     .mockResolvedValue(new Response(JSON.stringify(channel), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await createChannel({ name: "project" });
+  const data = await createChannel(TOKEN, { name: "project" });
 
   expect(data).toEqual(channel);
   const [url, options] = fetchMock.mock.calls[0];
@@ -289,19 +284,19 @@ test("createChannel posts the name with auth and content-type headers", async ()
 test("createChannel throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(createChannel({ name: "project" })).rejects.toThrow("credentials");
+  await expect(createChannel(TOKEN, { name: "project" })).rejects.toThrow("credentials");
 });
 
 test("createChannel throws network error when fetch rejects", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
-  await expect(createChannel({ name: "project" })).rejects.toThrow("network");
+  await expect(createChannel(TOKEN, { name: "project" })).rejects.toThrow("network");
 });
 
 test("createChannel throws network error on a 500", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 500 })));
 
-  await expect(createChannel({ name: "project" })).rejects.toThrow("network");
+  await expect(createChannel(TOKEN, { name: "project" })).rejects.toThrow("network");
 });
 
 test("createChannel throws network error on a 200 with an unexpected body", async () => {
@@ -310,7 +305,7 @@ test("createChannel throws network error on a 200 with an unexpected body", asyn
     vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 })),
   );
 
-  await expect(createChannel({ name: "project" })).rejects.toThrow("network");
+  await expect(createChannel(TOKEN, { name: "project" })).rejects.toThrow("network");
 });
 
 test("renameChannel patches the channel name", async () => {
@@ -320,7 +315,7 @@ test("renameChannel patches the channel name", async () => {
     .mockResolvedValue(new Response(JSON.stringify(channel), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await renameChannel({ id: "3", name: "renamed" });
+  const data = await renameChannel(TOKEN, { id: "3", name: "renamed" });
 
   expect(data).toEqual(channel);
   const [url, options] = fetchMock.mock.calls[0];
@@ -333,13 +328,13 @@ test("renameChannel patches the channel name", async () => {
 test("renameChannel throws network error on a 404 with an empty body", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 404 })));
 
-  await expect(renameChannel({ id: "3", name: "renamed" })).rejects.toThrow("network");
+  await expect(renameChannel(TOKEN, { id: "3", name: "renamed" })).rejects.toThrow("network");
 });
 
 test("renameChannel throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(renameChannel({ id: "3", name: "renamed" })).rejects.toThrow("credentials");
+  await expect(renameChannel(TOKEN, { id: "3", name: "renamed" })).rejects.toThrow("credentials");
 });
 
 test("deleteChannel sends DELETE and validates the removal payload", async () => {
@@ -348,7 +343,7 @@ test("deleteChannel sends DELETE and validates the removal payload", async () =>
     .mockResolvedValue(new Response(JSON.stringify({ id: "3" }), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 
-  const data = await deleteChannel({ id: "3" });
+  const data = await deleteChannel(TOKEN, { id: "3" });
 
   expect(data).toEqual({ id: "3" });
   const [url, options] = fetchMock.mock.calls[0];
@@ -360,13 +355,13 @@ test("deleteChannel sends DELETE and validates the removal payload", async () =>
 test("deleteChannel throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(deleteChannel({ id: "3" })).rejects.toThrow("credentials");
+  await expect(deleteChannel(TOKEN, { id: "3" })).rejects.toThrow("credentials");
 });
 
 test("deleteChannel throws network error when fetch rejects", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
-  await expect(deleteChannel({ id: "3" })).rejects.toThrow("network");
+  await expect(deleteChannel(TOKEN, { id: "3" })).rejects.toThrow("network");
 });
 
 test("deleteChannel throws network error on a 200 with an unexpected body", async () => {
@@ -375,7 +370,7 @@ test("deleteChannel throws network error on a 200 with an unexpected body", asyn
     vi.fn().mockResolvedValue(new Response(JSON.stringify({ gone: true }), { status: 200 })),
   );
 
-  await expect(deleteChannel({ id: "3" })).rejects.toThrow("network");
+  await expect(deleteChannel(TOKEN, { id: "3" })).rejects.toThrow("network");
 });
 
 test("upsertChannel appends a new channel", () => {
@@ -414,32 +409,35 @@ test("applyChannelRemoval clears the channel, its messages and moves the selecti
       messageFixture("6"),
     ],
   );
-  useUiStore.setState({ currentChannelId: "3" });
+  const ui = createUiStore();
+  ui.setState({ currentChannelId: "3" });
 
-  applyChannelRemoval(queryClient, "3");
+  applyChannelRemoval(queryClient, ui, "3");
 
   expect(queryClient.getQueryData(["channels"])).toEqual([channelFixture("1", false)]);
   expect(queryClient.getQueryData(["messages"])).toEqual([messageFixture("6")]);
-  expect(useUiStore.getState().currentChannelId).toBe("1");
+  expect(ui.getState().currentChannelId).toBe("1");
 });
 
 test("applyChannelRemoval keeps the selection when another channel is removed", () => {
   const queryClient = new QueryClient();
   queryClient.setQueryData(["channels"], [channelFixture("1", false), channelFixture("3", true)]);
-  useUiStore.setState({ currentChannelId: "1" });
+  const ui = createUiStore();
+  ui.setState({ currentChannelId: "1" });
 
-  applyChannelRemoval(queryClient, "3");
+  applyChannelRemoval(queryClient, ui, "3");
 
-  expect(useUiStore.getState().currentChannelId).toBe("1");
+  expect(ui.getState().currentChannelId).toBe("1");
 });
 
 test("applyChannelRemoval sets a null selection on a cold or emptied cache", () => {
   const queryClient = new QueryClient();
-  useUiStore.setState({ currentChannelId: "3" });
+  const ui = createUiStore();
+  ui.setState({ currentChannelId: "3" });
 
-  applyChannelRemoval(queryClient, "3");
+  applyChannelRemoval(queryClient, ui, "3");
 
-  expect(useUiStore.getState().currentChannelId).toBe(null);
+  expect(ui.getState().currentChannelId).toBe(null);
 });
 
 function messageFixture(id) {

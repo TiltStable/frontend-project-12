@@ -5,15 +5,19 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getChannels, getMessages } from "../api.js";
-import { useUiStore } from "../store/ui.js";
+import { useAuthStore, useUiStore } from "../store/context.js";
 import ChannelModals from "./ChannelModals.jsx";
 import Channels from "./Channels.jsx";
 import Messages from "./Messages.jsx";
 
 function ChatPage() {
   const { t } = useTranslation();
-  const channelsQuery = useQuery({ queryKey: ["channels"], queryFn: getChannels });
-  const messagesQuery = useQuery({ queryKey: ["messages"], queryFn: getMessages });
+  const token = useAuthStore((state) => state.token);
+  // The queryFn must be an arrow closing over the token: TanStack Query
+  // calls queryFn with a QueryFunctionContext, which would otherwise be
+  // passed to the api function as the token.
+  const channelsQuery = useQuery({ queryKey: ["channels"], queryFn: () => getChannels(token) });
+  const messagesQuery = useQuery({ queryKey: ["messages"], queryFn: () => getMessages(token) });
   const currentChannelId = useUiStore((state) => state.currentChannelId);
   const setCurrentChannel = useUiStore((state) => state.setCurrentChannel);
   const channels = channelsQuery.data;

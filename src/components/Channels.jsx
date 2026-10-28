@@ -1,7 +1,7 @@
 import { ActionIcon, Button, Group, Menu, Stack, Text } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 
-import { useUiStore } from "../store/ui.js";
+import { useUiStore } from "../store/context.js";
 
 function ChannelMenu({ channel }) {
   const openModal = useUiStore((state) => state.openModal);
