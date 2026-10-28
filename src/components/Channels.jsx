@@ -9,11 +9,7 @@ function ChannelMenu({ channel }) {
   return (
     <Menu>
       <Menu.Target>
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          aria-label={t("channels.rowAria", { name: channel.name })}
-        >
+        <ActionIcon variant="subtle" color="gray" aria-label={t("channels.rowAria")}>
           ⋯
         </ActionIcon>
       </Menu.Target>

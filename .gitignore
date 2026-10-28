@@ -25,3 +25,4 @@ dist-ssr
 
 # Project memory (not committed, series convention)
 MEMORY.md
+tmp/

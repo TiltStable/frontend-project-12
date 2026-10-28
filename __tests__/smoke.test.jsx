@@ -57,7 +57,7 @@ test("renders the login form at /login", async () => {
 
   const markup = renderToString(await init(socket));
 
-  expect(markup).toContain("Ваш ник на Хекслете");
+  expect(markup).toContain("Ваш ник");
   expect(markup).toContain("Пароль");
   expect(markup).toContain("Войти");
 });

@@ -214,17 +214,17 @@ test("sendMessage posts the message with auth and content-type headers", async (
 test("sendMessage throws credentials error on 401", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
 
-  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
-    "credentials",
-  );
+  await expect(
+    sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" }),
+  ).rejects.toThrow("credentials");
 });
 
 test("sendMessage throws network error when fetch rejects", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
-  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
-    "network",
-  );
+  await expect(
+    sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" }),
+  ).rejects.toThrow("network");
 });
 
 test("sendMessage throws network error on a 200 with an unexpected body", async () => {
@@ -233,9 +233,9 @@ test("sendMessage throws network error on a 200 with an unexpected body", async 
     vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 })),
   );
 
-  await expect(sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" })).rejects.toThrow(
-    "network",
-  );
+  await expect(
+    sendMessage(TOKEN, { channelId: "1", body: "x", username: "admin" }),
+  ).rejects.toThrow("network");
 });
 
 test("upsertMessage appends a new message", () => {

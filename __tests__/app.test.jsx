@@ -108,7 +108,7 @@ test("a logged-out user at / is redirected to the login page", async () => {
 
   await waitForInAct(() => expect(window.location.pathname).toBe("/login"));
   expect(container.textContent).toContain("Вход");
-  expect(container.textContent).toContain("Ваш ник на Хекслете");
+  expect(container.textContent).toContain("Ваш ник");
 });
 
 test("the logout button clears the session, the cache and the ui store", async () => {
@@ -125,7 +125,7 @@ test("the logout button clears the session, the cache and the ui store", async (
   await waitForInAct(() => expect(stores.auth.getState().token).toBeNull());
 
   expect(window.location.pathname).toBe("/login");
-  expect(container.textContent).toContain("Ваш ник на Хекслете");
+  expect(container.textContent).toContain("Ваш ник");
   expect(queryClient.getQueryData(["channels"])).toBeUndefined();
   expect(stores.ui.getState().currentChannelId).toBeNull();
   expect(stores.ui.getState().modal).toBeNull();
@@ -141,7 +141,5 @@ test("a failed load renders a visible toast with the error text", async () => {
 
   // Notifications is mounted inside App, so the toast must actually appear
   // in the document, not only in the store.
-  await waitForInAct(() =>
-    expect(document.body.textContent).toContain("Не удалось загрузить данные"),
-  );
+  await waitForInAct(() => expect(document.body.textContent).toContain("Ошибка соединения"));
 });

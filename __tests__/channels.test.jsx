@@ -171,9 +171,10 @@ test("channel rows show the # prefix and the menu only for removable channels", 
   expect(buttonNames).toContain("# general");
   expect(buttonNames).toContain("# random");
   expect(buttonNames).toContain("# project");
-  expect(container.querySelector('button[aria-label="Меню канала project"]')).not.toBeNull();
-  expect(container.querySelector('button[aria-label="Меню канала general"]')).toBeNull();
-  expect(container.querySelector('button[aria-label="Меню канала random"]')).toBeNull();
+  // The menu aria-label is static: exactly one exists, on the removable row.
+  const menuButtons = container.querySelectorAll('button[aria-label="Управление каналом"]');
+  expect(menuButtons).toHaveLength(1);
+  expect(menuButtons[0].closest("div").textContent.includes("# project")).toBe(true);
 });
 
 test("clicking a channel switches the chat", async () => {
@@ -263,7 +264,9 @@ test("socket renameChannel updates the row in place without adding a menu", asyn
   expect(container.textContent).toContain("# random2");
   const buttonNames = [...container.querySelectorAll("aside button")].map((b) => b.textContent);
   expect(buttonNames).not.toContain("# random");
-  expect(container.querySelector('button[aria-label="Меню канала random2"]')).toBeNull();
+  // The renamed row is not removable, so the single menu still belongs to
+  // the project channel.
+  expect(container.querySelectorAll('button[aria-label="Управление каналом"]')).toHaveLength(1);
 });
 
 test("removing every channel over the socket leaves the tree alive", async () => {
@@ -380,17 +383,23 @@ const submitForm = (form) => {
 const bodyInput = () => document.body.querySelector('input[name="name"]');
 
 const openAddModal = async () => {
-  const addButton = [...container.querySelectorAll("button")].find(
-    (b) => b.textContent === "+ Добавить канал",
-  );
+  const addButton = [...container.querySelectorAll("button")].find((b) => b.textContent === "+");
   act(() => addButton.click());
   await waitForInAct(() => expect(bodyInput()).not.toBeNull());
   return bodyInput();
 };
 
+// The menu toggle carries a static aria-label; it is found within the row of
+// the named channel (the row button and the menu sit in the same group).
+const menuButtonFor = (channelName) => {
+  const rowButton = [...container.querySelectorAll("aside button")].find(
+    (b) => b.textContent === `# ${channelName}`,
+  );
+  return rowButton?.closest("div")?.querySelector('button[aria-label="Управление каналом"]');
+};
+
 const openChannelMenu = async (channelName, itemText) => {
-  const menuButton = container.querySelector(`button[aria-label="Меню канала ${channelName}"]`);
-  act(() => menuButton.click());
+  act(() => menuButtonFor(channelName).click());
   await waitForInAct(() =>
     expect(
       [...document.body.querySelectorAll("[role=menuitem]")].map((i) => i.textContent),
@@ -546,7 +555,7 @@ test("remove channel: confirm, DELETE, message cleanup, default fallback", async
   await flush();
   expect(container.textContent).toContain("# project");
 
-  const menuButton = container.querySelector('button[aria-label="Меню канала project"]');
+  const menuButton = menuButtonFor("project");
   act(() => menuButton.click());
   await waitForInAct(() =>
     expect(

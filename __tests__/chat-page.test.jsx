@@ -142,7 +142,7 @@ test("does not crash when channels fail while messages succeed", async () => {
   // Regression: Messages used to call channels.find on undefined and crash
   // the whole tree when only the channels request failed. The tree must stay
   // alive: the h1 is rendered unconditionally.
-  expect(container.textContent).toContain("Не удалось загрузить данные");
+  expect(container.textContent).toContain("Ошибка соединения");
   expect(container.textContent).toContain("Hexlet Chat");
 });
 
@@ -165,7 +165,7 @@ test("a failed channels load announces a toast and deduplicates by id", async ()
   await waitForInAct(() =>
     expect(showSpy).toHaveBeenCalledWith({
       id: "channels-load-error",
-      message: "Не удалось загрузить данные",
+      message: "Ошибка соединения",
       color: "red",
     }),
   );
@@ -190,7 +190,7 @@ test("a 401 on load shows the session error, not a network one", async () => {
   // An expired session is actionable; showing the generic network text would
   // send the user into pointless retries.
   expect(container.textContent).toContain("Сессия устарела, войдите заново");
-  expect(container.textContent).not.toContain("Не удалось загрузить данные");
+  expect(container.textContent).not.toContain("Ошибка соединения");
   expect(container.textContent).toContain("Hexlet Chat");
 });
 
@@ -203,7 +203,7 @@ const typeText = (input, text) => {
 };
 
 test("sends a message and shows it in the feed", async () => {
-    stores.ui.setState({ currentChannelId: "1" });
+  stores.ui.setState({ currentChannelId: "1" });
   const fetchMock = vi.fn((url, options) => {
     if (url.endsWith("/channels")) {
       return Promise.resolve(
@@ -249,7 +249,7 @@ test("sends a message and shows it in the feed", async () => {
 });
 
 test("keeps the input text and shows an error when sending fails", async () => {
-    stores.ui.setState({ currentChannelId: "1" });
+  stores.ui.setState({ currentChannelId: "1" });
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options) => {
@@ -281,14 +281,12 @@ test("keeps the input text and shows an error when sending fails", async () => {
     await flush();
   });
 
-  await waitForInAct(() =>
-    expect(container.textContent).toContain("Не удалось отправить сообщение"),
-  );
+  await waitForInAct(() => expect(container.textContent).toContain("Ошибка соединения"));
   expect(input.value).toBe("do not lose me");
 });
 
 test("a double submit in one synchronous block sends only one message", async () => {
-    stores.ui.setState({ currentChannelId: "1" });
+  stores.ui.setState({ currentChannelId: "1" });
   const fetchMock = vi.fn((url, options) => {
     if (options?.method === "POST") {
       const posted = JSON.parse(options.body);
@@ -334,8 +332,8 @@ test("a double submit in one synchronous block sends only one message", async ()
 });
 
 test("sending without a username shows a session error and skips the request", async () => {
-    stores.ui.setState({ currentChannelId: "1" });
-    stores.auth.setState({ token: "jwt-token", username: null });
+  stores.ui.setState({ currentChannelId: "1" });
+  stores.auth.setState({ token: "jwt-token", username: null });
   const fetchMock = vi.fn((url) => {
     if (url.endsWith("/channels")) {
       return Promise.resolve(
@@ -371,7 +369,7 @@ test("sending without a username shows a session error and skips the request", a
 });
 
 test("a profane message is masked before it is sent", async () => {
-    stores.ui.setState({ currentChannelId: "1" });
+  stores.ui.setState({ currentChannelId: "1" });
   const word = filter.getDictionary("ru").find((w) => /[а-яё]/i.test(w) && !/\s/.test(w));
   const fetchMock = vi.fn((url, options) => {
     if (url.endsWith("/channels")) {

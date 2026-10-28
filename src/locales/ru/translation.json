@@ -3,23 +3,23 @@
     "title": "Hexlet Chat"
   },
   "channels": {
-    "addButton": "+ Добавить канал",
+    "addButton": "+",
     "menu": {
       "remove": "Удалить",
       "rename": "Переименовать"
     },
-    "rowAria": "Меню канала {{name}}",
+    "rowAria": "Управление каналом",
     "rowName": "# {{name}}"
   },
   "chat": {
     "channelsTitle": "Каналы",
-    "loadFailed": "Не удалось загрузить данные",
+    "loadFailed": "Ошибка соединения",
     "loading": "Загрузка…"
   },
   "errors": {
     "conflict": "Такой пользователь уже существует",
     "credentials": "Неверные имя пользователя или пароль",
-    "network": "Ошибка сети",
+    "network": "Ошибка соединения",
     "sessionExpired": "Сессия устарела, войдите заново"
   },
   "header": {
@@ -30,14 +30,14 @@
     "submit": "Войти",
     "title": "Вход",
     "toSignupLink": "Регистрация",
-    "usernameLabel": "Ваш ник на Хекслете"
+    "usernameLabel": "Ваш ник"
   },
   "messages": {
     "empty": "Сообщений пока нет",
     "header": "# {{name}}",
     "placeholder": "Введите сообщение…",
     "send": "Отправить",
-    "sendFailed": "Не удалось отправить сообщение"
+    "sendFailed": "Ошибка соединения"
   },
   "modals": {
     "add": {
@@ -84,7 +84,7 @@
     "channelNameDuplicate": "Канал с таким именем уже существует",
     "length3to20": "От 3 до 20 символов",
     "passwordLength": "Не менее 6 символов",
-    "passwordMismatch": "Пароли не совпадают",
+    "passwordMismatch": "Пароли должны совпадать",
     "required": "Обязательное поле"
   }
 }
