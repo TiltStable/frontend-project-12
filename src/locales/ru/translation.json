@@ -9,7 +9,7 @@
       "rename": "Переименовать"
     },
     "rowAria": "Управление каналом",
-    "rowName": "{{name}}"
+    "rowName": "# {{name}}"
   },
   "chat": {
     "channelsTitle": "Каналы",
@@ -34,7 +34,7 @@
   },
   "messages": {
     "empty": "Сообщений пока нет",
-    "header": "# {{name}}",
+    "header": "{{name}}",
     "label": "Новое сообщение",
     "placeholder": "Введите сообщение…",
     "send": "Отправить",

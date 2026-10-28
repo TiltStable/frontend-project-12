@@ -161,20 +161,20 @@ beforeEach(() => {
   hideSpy = vi.spyOn(notifications, "hide");
 });
 
-test("channel rows show plain names and the menu only for removable channels", async () => {
+test("channel rows show the # prefix and the menu only for removable channels", async () => {
   vi.stubGlobal("fetch", makeFetchMock());
 
   renderChatPage();
   await flush();
 
   const buttonNames = [...container.querySelectorAll("aside button")].map((b) => b.textContent);
-  expect(buttonNames).toContain("general");
-  expect(buttonNames).toContain("random");
-  expect(buttonNames).toContain("project");
+  expect(buttonNames).toContain("# general");
+  expect(buttonNames).toContain("# random");
+  expect(buttonNames).toContain("# project");
   // The menu aria-label is static: exactly one exists, on the removable row.
   const menuButtons = container.querySelectorAll('button[aria-label="Управление каналом"]');
   expect(menuButtons).toHaveLength(1);
-  expect(menuButtons[0].closest("div").textContent.includes("project")).toBe(true);
+  expect(menuButtons[0].closest("div").textContent.includes("# project")).toBe(true);
 });
 
 test("clicking a channel switches the chat", async () => {
@@ -184,16 +184,15 @@ test("clicking a channel switches the chat", async () => {
   await flush();
 
   const randomButton = [...container.querySelectorAll("aside button")].find(
-    (b) => b.textContent === "random",
+    (b) => b.textContent === "# random",
   );
   act(() => randomButton.click());
   await flush();
 
-  // The messages header carries the "# name" current-channel indicator.
   expect(container.textContent).toContain("# random");
   expect(container.textContent).toContain("Сообщений пока нет");
   const activeButton = container.querySelector("aside button[aria-current]");
-  expect(activeButton.textContent).toBe("random");
+  expect(activeButton.textContent).toBe("# random");
 });
 
 test("a dangling selection falls back to the first channel after the load", async () => {
@@ -204,7 +203,7 @@ test("a dangling selection falls back to the first channel after the load", asyn
   await flush();
 
   const activeButton = container.querySelector("aside button[aria-current]");
-  expect(activeButton.textContent).toBe("general");
+  expect(activeButton.textContent).toBe("# general");
   expect(container.textContent).toContain("# general");
 });
 
@@ -245,9 +244,9 @@ test("socket newChannel appends without switching and is idempotent", async () =
     await flush();
   });
 
-  expect(container.textContent.match(/extra/g)).toHaveLength(1);
+  expect(container.textContent.match(/# extra/g)).toHaveLength(1);
   const activeButton = container.querySelector("aside button[aria-current]");
-  expect(activeButton.textContent).toBe("general");
+  expect(activeButton.textContent).toBe("# general");
 });
 
 test("socket renameChannel updates the row in place without adding a menu", async () => {
@@ -262,9 +261,9 @@ test("socket renameChannel updates the row in place without adding a menu", asyn
     await flush();
   });
 
-  expect(container.textContent).toContain("random2");
+  expect(container.textContent).toContain("# random2");
   const buttonNames = [...container.querySelectorAll("aside button")].map((b) => b.textContent);
-  expect(buttonNames).not.toContain("random");
+  expect(buttonNames).not.toContain("# random");
   // The renamed row is not removable, so the single menu still belongs to
   // the project channel.
   expect(container.querySelectorAll('button[aria-label="Управление каналом"]')).toHaveLength(1);
@@ -394,7 +393,7 @@ const openAddModal = async () => {
 // the named channel (the row button and the menu sit in the same group).
 const menuButtonFor = (channelName) => {
   const rowButton = [...container.querySelectorAll("aside button")].find(
-    (b) => b.textContent === channelName,
+    (b) => b.textContent === `# ${channelName}`,
   );
   return rowButton?.closest("div")?.querySelector('button[aria-label="Управление каналом"]');
 };
@@ -444,7 +443,7 @@ test("add channel: focuses the input, posts, appends and switches", async () => 
 
   await waitForInAct(() => expect(container.textContent).toContain("# my channel"));
   const activeButton = container.querySelector("aside button[aria-current]");
-  expect(activeButton.textContent).toBe("my channel");
+  expect(activeButton.textContent).toBe("# my channel");
   expect(queryClient.getQueryData(["channels"]).map((c) => c.id)).toEqual(["1", "2", "3", "4"]);
   await waitForInAct(() => expect(bodyInput()).toBeNull());
   expect(showSpy).toHaveBeenCalledWith({ message: "Канал создан", color: "green" });
@@ -521,7 +520,7 @@ test("rename channel: prefilled input, PATCH and list update", async () => {
   expect(patchCall[0]).toBe("/api/v1/channels/3");
   expect(JSON.parse(patchCall[1].body)).toEqual({ name: "projects" });
 
-  await waitForInAct(() => expect(container.textContent).toContain("projects"));
+  await waitForInAct(() => expect(container.textContent).toContain("# projects"));
   expect(container.textContent).not.toMatch(/# project\b/);
   await waitForInAct(() => expect(bodyInput()).toBeNull());
   expect(showSpy).toHaveBeenCalledWith({ message: "Канал переименован", color: "green" });
