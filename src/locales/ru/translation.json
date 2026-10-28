@@ -1,0 +1,90 @@
+{
+  "app": {
+    "title": "Hexlet Chat"
+  },
+  "channels": {
+    "addButton": "+ Добавить канал",
+    "menu": {
+      "remove": "Удалить",
+      "rename": "Переименовать"
+    },
+    "rowAria": "Меню канала {{name}}",
+    "rowName": "# {{name}}"
+  },
+  "chat": {
+    "channelsTitle": "Каналы",
+    "loadFailed": "Не удалось загрузить данные",
+    "loading": "Загрузка…"
+  },
+  "errors": {
+    "conflict": "Такой пользователь уже существует",
+    "credentials": "Неверные имя пользователя или пароль",
+    "network": "Ошибка сети",
+    "sessionExpired": "Сессия устарела, войдите заново"
+  },
+  "header": {
+    "logout": "Выйти"
+  },
+  "login": {
+    "passwordLabel": "Пароль",
+    "submit": "Войти",
+    "title": "Вход",
+    "toSignupLink": "Регистрация",
+    "usernameLabel": "Ваш ник на Хекслете"
+  },
+  "messages": {
+    "empty": "Сообщений пока нет",
+    "header": "# {{name}}",
+    "placeholder": "Введите сообщение…",
+    "send": "Отправить",
+    "sendFailed": "Не удалось отправить сообщение"
+  },
+  "modals": {
+    "add": {
+      "error": "Не удалось создать канал",
+      "submit": "Добавить",
+      "title": "Добавить канал"
+    },
+    "nameLabel": "Имя канала",
+    "remove": {
+      "cancel": "Отменить",
+      "confirm": "Удалить канал «{{name}}»? Сообщения канала будут удалены безвозвратно.",
+      "error": "Не удалось удалить канал",
+      "submit": "Удалить",
+      "title": "Удаление канала"
+    },
+    "rename": {
+      "error": "Не удалось переименовать канал",
+      "submit": "Сохранить",
+      "title": "Переименовать канал"
+    }
+  },
+  "notFound": {
+    "homeLink": "На главную",
+    "title": "404 — страница не найдена"
+  },
+  "notifications": {
+    "channelCreated": "Канал создан",
+    "channelRemoved": "Канал удалён",
+    "channelRenamed": "Канал переименован"
+  },
+  "signup": {
+    "confirmLabel": "Подтвердите пароль",
+    "passwordLabel": "Пароль",
+    "submit": "Зарегистрироваться",
+    "title": "Регистрация",
+    "toLoginLink": "Войти",
+    "usernameLabel": "Имя пользователя"
+  },
+  "socket": {
+    "lost": "Нет соединения. Проверьте подключение к интернету.",
+    "restored": "Соединение восстановлено"
+  },
+  "validation": {
+    "channelNameDuplicate": "Канал с таким именем уже существует",
+    "length3to20": "От 3 до 20 символов",
+    "passwordLength": "Не менее 6 символов",
+    "passwordMismatch": "Пароли не совпадают",
+    "required": "Обязательное поле"
+  }
+}

@@ -10,20 +10,46 @@
 
 ## Стек
 
-- JavaScript
+- React 19 (хуки) + Vite
+- React Router (маршрутизация)
+- Mantine (UI) + @mantine/form
+- Zustand (стейт-менеджер, persist в localStorage)
+- TanStack Query (загрузка и кеширование серверных данных)
+- socket.io-client (real-time)
+- @hexlet/chat-server (учебный бэкенд: REST API + websockets)
+- Vitest, oxlint, oxfmt
 
 ## Установка
-
-<!-- Опишите установку: клонирование, зависимости, переменные окружения -->
 
 ```bash
 git clone https://github.com/TiltStable/frontend-project-12.git
 cd frontend-project-12
+make install
 ```
+
+Требуется Node.js >= 22.12.0.
 
 ## Использование
 
-<!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
+```bash
+# собрать фронтенд в dist
+make build
+
+# запустить сервер (раздаёт dist + API + websockets на :5001)
+make start
+
+# проверить сервер
+curl http://localhost:5001/api/v1/channels
+
+# запуск в разработке: бэкенд (:5001) + vite dev-сервер с прокси (:5002)
+make develop
+
+# тесты и линтер
+make test
+make lint
+```
+
+Сайт проекта: будет добавлен после деплоя.
 
 ---
 
