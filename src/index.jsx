@@ -1,7 +1,10 @@
 import ReactDOM from "react-dom/client";
 import { io } from "socket.io-client";
 
+import initMonitoring, { reportError } from "./monitoring.js";
 import init from "./init.jsx";
+
+initMonitoring();
 
 const app = async () => {
   const root = ReactDOM.createRoot(document.querySelector("#chat"));
@@ -10,6 +13,7 @@ const app = async () => {
 };
 
 app().catch((error) => {
+  reportError(error);
   console.error("Failed to start the app:", error);
   const rootEl = document.querySelector("#chat");
   if (rootEl) {
