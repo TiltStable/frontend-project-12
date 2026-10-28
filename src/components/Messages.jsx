@@ -85,6 +85,7 @@ function Messages({ messages, channels, currentChannelId }) {
         )}
         <TextInput
           name="body"
+          aria-label={t("messages.label")}
           placeholder={t("messages.placeholder")}
           value={body}
           disabled={sending}
