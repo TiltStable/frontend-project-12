@@ -9,7 +9,7 @@
       "rename": "Переименовать"
     },
     "rowAria": "Управление каналом",
-    "rowName": "# {{name}}"
+    "rowName": "{{name}}"
   },
   "chat": {
     "channelsTitle": "Каналы",
