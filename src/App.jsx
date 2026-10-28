@@ -10,7 +10,7 @@ import Header from "./components/Header.jsx";
 import LoginPage from "./components/LoginPage.jsx";
 import NotFoundPage from "./components/NotFoundPage.jsx";
 import SignupPage from "./components/SignupPage.jsx";
-import { useAuthStore } from "./store/auth.js";
+import { useAuthStore } from "./store/context.js";
 
 // Styles are imported next to the theme provider: in browser-mode tests,
 // imports from index.jsx do not reach the page.

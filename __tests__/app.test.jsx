@@ -5,8 +5,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import App from "../src/App.jsx";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { StoresContext } from "../src/store/context.js";
+import { createTestStores } from "./helpers.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -48,6 +48,7 @@ const waitForInAct = async (assertion) => {
 let container;
 let root;
 let queryClient;
+let stores;
 
 const renderApp = () => {
   queryClient = new QueryClient({
@@ -57,15 +58,19 @@ const renderApp = () => {
   document.body.append(container);
   root = createRoot(container);
   act(() => {
-    root.render(<App queryClient={queryClient} />);
+    root.render(
+      <StoresContext.Provider value={stores}>
+        <App queryClient={queryClient} />
+      </StoresContext.Provider>,
+    );
   });
 };
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   window.history.replaceState({}, "", "/");
-  useAuthStore.setState({ token: null, username: null });
-  useUiStore.setState({ currentChannelId: null, modal: null });
+  localStorage.clear();
+  stores = createTestStores();
 });
 
 afterEach(() => {
@@ -103,12 +108,12 @@ test("a logged-out user at / is redirected to the login page", async () => {
 
   await waitForInAct(() => expect(window.location.pathname).toBe("/login"));
   expect(container.textContent).toContain("Вход");
-  expect(container.textContent).toContain("Ваш ник на Хекслете");
+  expect(container.textContent).toContain("Ваш ник");
 });
 
 test("the logout button clears the session, the cache and the ui store", async () => {
-  useAuthStore.setState({ token: "jwt-token", username: "admin" });
-  useUiStore.setState({ currentChannelId: "3", modal: { type: "add" } });
+  stores.auth.setState({ token: "jwt-token", username: "admin" });
+  stores.ui.setState({ currentChannelId: "3", modal: { type: "add" } });
   renderApp();
   await flush();
   queryClient.setQueryData(["channels"], [{ id: "1", name: "general", removable: false }]);
@@ -117,13 +122,13 @@ test("the logout button clears the session, the cache and the ui store", async (
     (b) => b.textContent === "Выйти",
   );
   act(() => logoutButton.click());
-  await waitForInAct(() => expect(useAuthStore.getState().token).toBeNull());
+  await waitForInAct(() => expect(stores.auth.getState().token).toBeNull());
 
   expect(window.location.pathname).toBe("/login");
-  expect(container.textContent).toContain("Ваш ник на Хекслете");
+  expect(container.textContent).toContain("Ваш ник");
   expect(queryClient.getQueryData(["channels"])).toBeUndefined();
-  expect(useUiStore.getState().currentChannelId).toBeNull();
-  expect(useUiStore.getState().modal).toBeNull();
+  expect(stores.ui.getState().currentChannelId).toBeNull();
+  expect(stores.ui.getState().modal).toBeNull();
 });
 
 test("a failed load renders a visible toast with the error text", async () => {
@@ -131,12 +136,10 @@ test("a failed load renders a visible toast with the error text", async () => {
     "fetch",
     vi.fn(() => Promise.resolve(new Response("", { status: 500 }))),
   );
-  useAuthStore.setState({ token: "jwt-token", username: "admin" });
+  stores.auth.setState({ token: "jwt-token", username: "admin" });
   renderApp();
 
   // Notifications is mounted inside App, so the toast must actually appear
   // in the document, not only in the store.
-  await waitForInAct(() =>
-    expect(document.body.textContent).toContain("Не удалось загрузить данные"),
-  );
+  await waitForInAct(() => expect(document.body.textContent).toContain("Ошибка соединения"));
 });

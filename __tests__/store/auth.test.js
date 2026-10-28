@@ -1,22 +1,27 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, test } from "vitest";
 
-import { useAuthStore } from "../../src/store/auth.js";
+import { createAuthStore } from "../../src/store/auth.js";
+
+// Each test gets its own store instance, exactly like each app launch does:
+// persist hydrates synchronously from localStorage at creation.
+let auth;
 
 beforeEach(() => {
-  useAuthStore.getState().logOut();
+  localStorage.clear();
+  auth = createAuthStore();
 });
 
 test("logIn stores token and username", () => {
-  useAuthStore.getState().logIn({ token: "jwt-token", username: "admin" });
+  auth.getState().logIn({ token: "jwt-token", username: "admin" });
 
-  const state = useAuthStore.getState();
+  const state = auth.getState();
   expect(state.token).toBe("jwt-token");
   expect(state.username).toBe("admin");
 });
 
 test("logIn persists credentials to localStorage", () => {
-  useAuthStore.getState().logIn({ token: "jwt-token", username: "admin" });
+  auth.getState().logIn({ token: "jwt-token", username: "admin" });
 
   const persisted = JSON.parse(localStorage.getItem("auth"));
   expect(persisted.state.token).toBe("jwt-token");
@@ -24,11 +29,11 @@ test("logIn persists credentials to localStorage", () => {
 });
 
 test("logOut clears credentials in state and localStorage", () => {
-  useAuthStore.getState().logIn({ token: "jwt-token", username: "admin" });
+  auth.getState().logIn({ token: "jwt-token", username: "admin" });
 
-  useAuthStore.getState().logOut();
+  auth.getState().logOut();
 
-  const state = useAuthStore.getState();
+  const state = auth.getState();
   expect(state.token).toBeNull();
   expect(state.username).toBeNull();
   const persisted = JSON.parse(localStorage.getItem("auth"));

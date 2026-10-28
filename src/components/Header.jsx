@@ -3,8 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
-import { useAuthStore } from "../store/auth.js";
-import { useUiStore } from "../store/ui.js";
+import { useAuthStore, useStores } from "../store/context.js";
 
 // The logout invariant lives here: session store, session UI state and the
 // query cache (the previous user's channels/messages) must not outlive the
@@ -12,13 +11,14 @@ import { useUiStore } from "../store/ui.js";
 // does not fire.
 function Header() {
   const token = useAuthStore((state) => state.token);
+  const { auth, ui } = useStores();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   const handleLogOut = () => {
-    useAuthStore.getState().logOut();
-    useUiStore.setState({ currentChannelId: null, modal: null });
+    auth.getState().logOut();
+    ui.setState({ currentChannelId: null, modal: null });
     navigate("/login", { replace: true });
     queryClient.clear();
   };

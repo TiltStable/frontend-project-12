@@ -27,6 +27,9 @@ describe("initMonitoring", () => {
 
   test("warns and skips initialization without a DSN", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // Explicit empty stub: the developer's .env.local may carry a real DSN,
+    // and unstubbing would otherwise restore it into the "no DSN" branch.
+    vi.stubEnv("VITE_SENTRY_DSN", "");
 
     expect(initMonitoring()).toBe(false);
     expect(Sentry.init).not.toHaveBeenCalled();

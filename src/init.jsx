@@ -12,14 +12,31 @@ import {
   upsertMessage,
 } from "./api.js";
 import resources from "./locales/index.js";
-import { useAuthStore } from "./store/auth.js";
+import { StoresContext } from "./store/context.js";
+import { createAuthStore } from "./store/auth.js";
+import { createUiStore } from "./store/ui.js";
 import App from "./App.jsx";
+
+// Both stores are per-launch state: the default argument builds a fresh pair
+// on every call, so nothing survives between launches (closed browser-mode
+// tests launch the app repeatedly in one page). Tests inject pre-seeded
+// stores through the same option, as with queryClient.
+const createStores = () => ({ auth: createAuthStore(), ui: createUiStore() });
 
 // The socket is opened by the entry point and passed in, so the external
 // resource stays on the caller's side and can be swapped from outside.
-// The query client is injectable for the same reason: tests inspect the
-// exact cache the handlers write to.
-const init = async (socket, queryClient = new QueryClient()) => {
+// The query client and the stores are injectable for the same reason:
+// tests inspect the exact instances the app runs on.
+const init = async (socket, options = {}) => {
+  // The previous contract passed the query client positionally. Under the
+  // options signature that client would be read as the options object and
+  // silently ignored, so a stale caller must fail loudly instead.
+  if (options instanceof QueryClient) {
+    throw new Error("init(socket, options): pass { queryClient, stores }, not a QueryClient");
+  }
+  const { queryClient = new QueryClient(), stores = createStores() } = options;
+  const { auth, ui } = stores;
+
   // The default locale is ru by the project requirement: no language
   // detection, i18next promotes the first fallback code to the language
   // when neither lng nor a detector is given.
@@ -33,7 +50,7 @@ const init = async (socket, queryClient = new QueryClient()) => {
   // point), but a signed-out client must not repopulate the cache: the
   // next session rebuilds it with its own fetch.
   const requireSession = (handler) => (payload) => {
-    if (!useAuthStore.getState().token) {
+    if (!auth.getState().token) {
       return;
     }
     handler(payload);
@@ -65,7 +82,7 @@ const init = async (socket, queryClient = new QueryClient()) => {
     "removeChannel",
     requireSession((payload) => {
       if (isChannelRemoval(payload)) {
-        applyChannelRemoval(queryClient, payload.id);
+        applyChannelRemoval(queryClient, ui, payload.id);
       } else {
         queryClient.invalidateQueries({ queryKey: ["channels"] });
         queryClient.invalidateQueries({ queryKey: ["messages"] });
@@ -105,9 +122,11 @@ const init = async (socket, queryClient = new QueryClient()) => {
   });
 
   return (
-    <I18nextProvider i18n={i18n}>
-      <App queryClient={queryClient} />
-    </I18nextProvider>
+    <StoresContext.Provider value={stores}>
+      <I18nextProvider i18n={i18n}>
+        <App queryClient={queryClient} />
+      </I18nextProvider>
+    </StoresContext.Provider>
   );
 };
 

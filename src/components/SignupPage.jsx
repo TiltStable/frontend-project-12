@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { signUp as signUpRequest } from "../api.js";
-import { useAuthStore } from "../store/auth.js";
+import { useAuthStore } from "../store/context.js";
 
 function SignupPage() {
   const { t } = useTranslation();

@@ -5,8 +5,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import App from "../src/App.jsx";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { StoresContext } from "../src/store/context.js";
+import { createTestStores } from "./helpers.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -66,6 +66,7 @@ const makeFetchMock = () =>
 
 let container;
 let root;
+let stores;
 
 const renderApp = (path) => {
   window.history.replaceState({}, "", path);
@@ -74,7 +75,9 @@ const renderApp = (path) => {
   root = createRoot(container);
   act(() => {
     root.render(
-      <App queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })} />,
+      <StoresContext.Provider value={stores}>
+        <App queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })} />
+      </StoresContext.Provider>,
     );
   });
 };
@@ -85,8 +88,8 @@ beforeEach(() => {
   });
   fetchMock = makeFetchMock();
   vi.stubGlobal("fetch", fetchMock);
-  useAuthStore.setState({ token: null, username: null });
-  useUiStore.setState({ currentChannelId: null, modal: null });
+  localStorage.clear();
+  stores = createTestStores();
 });
 
 afterEach(() => {
@@ -172,7 +175,7 @@ test("a mismatched confirmation is blocked", async () => {
   });
 
   expect(postCalls()).toHaveLength(0);
-  expect(container.textContent).toContain("Пароли не совпадают");
+  expect(container.textContent).toContain("Пароли должны совпадать");
 });
 
 test("changing the password revalidates a filled confirmation", async () => {
@@ -184,7 +187,7 @@ test("changing the password revalidates a filled confirmation", async () => {
     typeText(confirmPassword, "secret1");
     await flush();
   });
-  expect(container.textContent).not.toContain("Пароли не совпадают");
+  expect(container.textContent).not.toContain("Пароли должны совпадать");
 
   await act(async () => {
     typeText(password, "secret2");
@@ -193,7 +196,7 @@ test("changing the password revalidates a filled confirmation", async () => {
 
   // The mismatch error must surface before any submit: the confirmation was
   // computed against the password that no longer exists.
-  expect(container.textContent).toContain("Пароли не совпадают");
+  expect(container.textContent).toContain("Пароли должны совпадать");
   expect(postCalls()).toHaveLength(0);
 });
 
@@ -210,8 +213,8 @@ test("a successful signup posts, stores the session and redirects to the chat", 
 
   await waitForInAct(() => expect(window.location.pathname).toBe("/"));
   expect(container.textContent).toContain("Каналы");
-  expect(useAuthStore.getState().token).toBe("jwt-token");
-  expect(useAuthStore.getState().username).toBe("newbie");
+  expect(stores.auth.getState().token).toBe("jwt-token");
+  expect(stores.auth.getState().username).toBe("newbie");
 
   const calls = postCalls();
   expect(calls).toHaveLength(1);
@@ -252,7 +255,7 @@ test("a server failure shows the network error and keeps the form", async () => 
     await flush();
   });
 
-  expect(container.textContent).toContain("Ошибка сети");
+  expect(container.textContent).toContain("Ошибка соединения");
   expect(username.value).toBe("newbie");
   expect(postCalls()).toHaveLength(1);
 });
@@ -271,5 +274,5 @@ test("the login and signup pages link to each other", async () => {
   expect(toLogin?.textContent).toBe("Войти");
   act(() => toLogin.click());
   await waitForInAct(() => expect(window.location.pathname).toBe("/login"));
-  expect(container.textContent).toContain("Ваш ник на Хекслете");
+  expect(container.textContent).toContain("Ваш ник");
 });

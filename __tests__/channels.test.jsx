@@ -9,8 +9,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import ChatPage from "../src/components/ChatPage.jsx";
 import init from "../src/init.jsx";
 import filter from "leo-profanity";
-import { useAuthStore } from "../src/store/auth.js";
-import { useUiStore } from "../src/store/ui.js";
+import { StoresContext } from "../src/store/context.js";
+import { createTestStores, seedStores } from "./helpers.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -99,6 +99,7 @@ const makeChannelMutationFetchMock = ({
 
 let container;
 let root;
+let stores;
 
 const renderChatPage = () => {
   const queryClient = new QueryClient({
@@ -109,18 +110,22 @@ const renderChatPage = () => {
   root = createRoot(container);
   act(() => {
     root.render(
-      <MantineProvider>
-        <QueryClientProvider client={queryClient}>
-          <ChatPage />
-        </QueryClientProvider>
-      </MantineProvider>,
+      <StoresContext.Provider value={stores}>
+        <MantineProvider>
+          <QueryClientProvider client={queryClient}>
+            <ChatPage />
+          </QueryClientProvider>
+        </MantineProvider>
+      </StoresContext.Provider>,
     );
   });
   return { queryClient };
 };
 
 // init-driven render: init creates the query client itself, the fake socket
-// exposes handlers so a test can act as the socket server.
+// exposes handlers so a test can act as the socket server. The per-launch
+// store pair from beforeEach is injected, so seeding before the render and
+// flipping the token afterwards reach the exact instances the app runs on.
 const renderViaSocket = async (handlers) => {
   const socket = {
     on: (event, callback) => {
@@ -130,15 +135,15 @@ const renderViaSocket = async (handlers) => {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  const element = await init(socket);
+  const element = await init(socket, { stores });
   act(() => {
     root.render(element);
   });
 };
 
 beforeEach(() => {
-  useUiStore.setState({ currentChannelId: null, modal: null });
-  useAuthStore.setState({ token: "jwt-token", username: "admin" });
+  localStorage.clear();
+  stores = seedStores(createTestStores(), { token: "jwt-token", username: "admin" });
 });
 
 afterEach(() => {
@@ -166,9 +171,10 @@ test("channel rows show the # prefix and the menu only for removable channels", 
   expect(buttonNames).toContain("# general");
   expect(buttonNames).toContain("# random");
   expect(buttonNames).toContain("# project");
-  expect(container.querySelector('button[aria-label="Меню канала project"]')).not.toBeNull();
-  expect(container.querySelector('button[aria-label="Меню канала general"]')).toBeNull();
-  expect(container.querySelector('button[aria-label="Меню канала random"]')).toBeNull();
+  // The menu aria-label is static: exactly one exists, on the removable row.
+  const menuButtons = container.querySelectorAll('button[aria-label="Управление каналом"]');
+  expect(menuButtons).toHaveLength(1);
+  expect(menuButtons[0].closest("div").textContent.includes("# project")).toBe(true);
 });
 
 test("clicking a channel switches the chat", async () => {
@@ -191,7 +197,7 @@ test("clicking a channel switches the chat", async () => {
 
 test("a dangling selection falls back to the first channel after the load", async () => {
   vi.stubGlobal("fetch", makeFetchMock());
-  useUiStore.setState({ currentChannelId: "99" });
+  stores.ui.setState({ currentChannelId: "99" });
 
   renderChatPage();
   await flush();
@@ -204,7 +210,7 @@ test("a dangling selection falls back to the first channel after the load", asyn
 test("socket removeChannel moves the second client to the default channel", async () => {
   const fetchMock = makeFetchMock();
   vi.stubGlobal("fetch", fetchMock);
-  useUiStore.setState({ currentChannelId: "3" });
+  stores.ui.setState({ currentChannelId: "3" });
   const handlers = {};
 
   await renderViaSocket(handlers);
@@ -258,7 +264,9 @@ test("socket renameChannel updates the row in place without adding a menu", asyn
   expect(container.textContent).toContain("# random2");
   const buttonNames = [...container.querySelectorAll("aside button")].map((b) => b.textContent);
   expect(buttonNames).not.toContain("# random");
-  expect(container.querySelector('button[aria-label="Меню канала random2"]')).toBeNull();
+  // The renamed row is not removable, so the single menu still belongs to
+  // the project channel.
+  expect(container.querySelectorAll('button[aria-label="Управление каналом"]')).toHaveLength(1);
 });
 
 test("removing every channel over the socket leaves the tree alive", async () => {
@@ -275,7 +283,7 @@ test("removing every channel over the socket leaves the tree alive", async () =>
   });
 
   expect(container.textContent).toContain("Hexlet Chat");
-  expect(useUiStore.getState().currentChannelId).toBeNull();
+  expect(stores.ui.getState().currentChannelId).toBeNull();
 });
 
 test("socket events with no session do not repopulate the cache", async () => {
@@ -287,9 +295,13 @@ test("socket events with no session do not repopulate the cache", async () => {
   };
   const queryClient = new QueryClient();
   // A logged-out client: the socket itself stays connected after logout.
-  useAuthStore.setState({ token: null, username: null });
+  // persist writes every set to localStorage, so the pair from beforeEach
+  // left a token there: a fresh browser profile means clearing it before
+  // the launch, exactly like a real logged-out visitor.
+  localStorage.clear();
+  stores = createTestStores();
 
-  await init(socket, queryClient);
+  await init(socket, { queryClient, stores });
   // The afterEach hook expects a mounted root even though this test does
   // not render anything: the handlers are checked against the cache.
   container = document.createElement("div");
@@ -312,9 +324,10 @@ test("socket events with no session do not repopulate the cache", async () => {
   expect(queryClient.getQueryData(["channels"])).toBeUndefined();
 
   // Positive control: the same payloads land in the cache once a session
-  // exists, so the guard above is what blocks them.
+  // exists, so the guard above is what blocks them. The guard reads the
+  // injected store at call time, so flipping it after init is reachable.
   act(() => {
-    useAuthStore.setState({ token: "jwt-token", username: "admin" });
+    stores.auth.setState({ token: "jwt-token", username: "admin" });
   });
   await act(async () => {
     handlers.newMessage({
@@ -370,17 +383,23 @@ const submitForm = (form) => {
 const bodyInput = () => document.body.querySelector('input[name="name"]');
 
 const openAddModal = async () => {
-  const addButton = [...container.querySelectorAll("button")].find(
-    (b) => b.textContent === "+ Добавить канал",
-  );
+  const addButton = [...container.querySelectorAll("button")].find((b) => b.textContent === "+");
   act(() => addButton.click());
   await waitForInAct(() => expect(bodyInput()).not.toBeNull());
   return bodyInput();
 };
 
+// The menu toggle carries a static aria-label; it is found within the row of
+// the named channel (the row button and the menu sit in the same group).
+const menuButtonFor = (channelName) => {
+  const rowButton = [...container.querySelectorAll("aside button")].find(
+    (b) => b.textContent === `# ${channelName}`,
+  );
+  return rowButton?.closest("div")?.querySelector('button[aria-label="Управление каналом"]');
+};
+
 const openChannelMenu = async (channelName, itemText) => {
-  const menuButton = container.querySelector(`button[aria-label="Меню канала ${channelName}"]`);
-  act(() => menuButton.click());
+  act(() => menuButtonFor(channelName).click());
   await waitForInAct(() =>
     expect(
       [...document.body.querySelectorAll("[role=menuitem]")].map((i) => i.textContent),
@@ -531,12 +550,12 @@ test("remove channel: confirm, DELETE, message cleanup, default fallback", async
     deleteResponse: new Response(JSON.stringify({ id: "3" }), { status: 200 }),
   });
   vi.stubGlobal("fetch", fetchMock);
-  useUiStore.setState({ currentChannelId: "3" });
+  stores.ui.setState({ currentChannelId: "3" });
   const { queryClient } = renderChatPage();
   await flush();
   expect(container.textContent).toContain("# project");
 
-  const menuButton = container.querySelector('button[aria-label="Меню канала project"]');
+  const menuButton = menuButtonFor("project");
   act(() => menuButton.click());
   await waitForInAct(() =>
     expect(
@@ -580,7 +599,7 @@ test("socket disconnect and reconnect announce the connection status", async () 
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  await init(socket, queryClient);
+  await init(socket, { queryClient, stores });
 
   await act(async () => {
     handlers.disconnect();
