@@ -1,3 +1,5 @@
+import { routes } from "./routes.js";
+
 // Error messages are machine codes: the UI maps them to human texts, the
 // i18next step will move those texts to locales.
 //
@@ -104,7 +106,7 @@ const mutateJson = async (url, method, body, isItem, token) => {
 export const logIn = async ({ username, password }) => {
   let response;
   try {
-    response = await fetch("/api/v1/login", {
+    response = await fetch(routes.loginPath(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -139,7 +141,7 @@ export const logIn = async ({ username, password }) => {
 export const signUp = async ({ username, password }) => {
   let response;
   try {
-    response = await fetch("/api/v1/signup", {
+    response = await fetch(routes.signupPath(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -166,9 +168,9 @@ export const signUp = async ({ username, password }) => {
   return data;
 };
 
-export const getChannels = (token) => fetchList("/api/v1/channels", isChannel, token);
+export const getChannels = (token) => fetchList(routes.channelsPath(), isChannel, token);
 
-export const getMessages = (token) => fetchList("/api/v1/messages", isMessage, token);
+export const getMessages = (token) => fetchList(routes.messagesPath(), isMessage, token);
 
 // A message can reach the cache twice (the POST response of the sender and
 // the socket broadcast), so insertion is idempotent by id.
@@ -207,13 +209,13 @@ export const applyChannelRemoval = (queryClient, uiStore, channelId) => {
 };
 
 export const sendMessage = (token, { channelId, body, username }) =>
-  mutateJson("/api/v1/messages", "POST", { channelId, body, username }, isMessage, token);
+  mutateJson(routes.messagesPath(), "POST", { channelId, body, username }, isMessage, token);
 
 export const createChannel = (token, { name }) =>
-  mutateJson("/api/v1/channels", "POST", { name }, isChannel, token);
+  mutateJson(routes.channelsPath(), "POST", { name }, isChannel, token);
 
 export const renameChannel = (token, { id, name }) =>
-  mutateJson(`/api/v1/channels/${id}`, "PATCH", { name }, isChannel, token);
+  mutateJson(routes.channelPath(id), "PATCH", { name }, isChannel, token);
 
 export const deleteChannel = (token, { id }) =>
-  mutateJson(`/api/v1/channels/${id}`, "DELETE", undefined, isChannelRemoval, token);
+  mutateJson(routes.channelPath(id), "DELETE", undefined, isChannelRemoval, token);
