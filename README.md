@@ -1,6 +1,7 @@
 # Чат (Slack)
 
 [![hexlet-check](https://github.com/TiltStable/frontend-project-12/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/TiltStable/frontend-project-12/actions)
+[![Node CI](https://github.com/TiltStable/frontend-project-12/actions/workflows/node-ci.yml/badge.svg)](https://github.com/TiltStable/frontend-project-12/actions)
 
 Напишите real-time приложение на React, используя AJAX, REST, websockets, React (с хуками) + Zustand + TanStack Query + @mantine/form
 
