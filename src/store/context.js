@@ -8,8 +8,12 @@ export const StoresContext = createContext(null);
 
 export const useStores = () => {
   const stores = useContext(StoresContext);
-  if (!stores) {
-    throw new Error("Stores are not provided: the tree must render inside StoresContext.Provider");
+  // A truthy but incomplete value (a malformed init options object) must
+  // fail here by name, not later inside useSyncExternalStore.
+  if (!stores?.auth || !stores?.ui) {
+    throw new Error(
+      "Stores are not provided: the tree must render inside StoresContext.Provider with { auth, ui }",
+    );
   }
   return stores;
 };

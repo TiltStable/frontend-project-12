@@ -27,7 +27,14 @@ const createStores = () => ({ auth: createAuthStore(), ui: createUiStore() });
 // resource stays on the caller's side and can be swapped from outside.
 // The query client and the stores are injectable for the same reason:
 // tests inspect the exact instances the app runs on.
-const init = async (socket, { queryClient = new QueryClient(), stores = createStores() } = {}) => {
+const init = async (socket, options = {}) => {
+  // The previous contract passed the query client positionally. Under the
+  // options signature that client would be read as the options object and
+  // silently ignored, so a stale caller must fail loudly instead.
+  if (options instanceof QueryClient) {
+    throw new Error("init(socket, options): pass { queryClient, stores }, not a QueryClient");
+  }
+  const { queryClient = new QueryClient(), stores = createStores() } = options;
   const { auth, ui } = stores;
 
   // The default locale is ru by the project requirement: no language
