@@ -50,7 +50,7 @@ make test
 make lint
 ```
 
-Сайт проекта: будет добавлен после деплоя.
+Сайт проекта: https://frontend-project-12-5lo5.onrender.com
 
 ## Мониторинг ошибок
 
